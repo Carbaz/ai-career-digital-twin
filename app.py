@@ -92,7 +92,8 @@ class Me:
         self.openai = OpenAI()
         self.name = name
         # Download PDF from Hugging Face Hub
-        pdf_path = hf_hub_download(repo_id=repo_id, filename=cv_pdf_filename,
+        pdf_path = hf_hub_download(repo_id=repo_id, repo_type='dataset',
+                                   filename=cv_pdf_filename,
                                    token=os.getenv("HF_SELF_TOKEN"))
         reader = PdfReader(pdf_path)
         self.linkedin = ""
@@ -101,8 +102,9 @@ class Me:
             if text:
                 self.linkedin += text
         # Download summary from Hugging Face Hub
-        summary_path = hf_hub_download(repo_id=repo_id, filename=summary_filename,
-                                      token=os.getenv("HF_SELF_TOKEN"))
+        summary_path = hf_hub_download(repo_id=repo_id, repo_type='dataset',
+                                       filename=summary_filename,
+                                       token=os.getenv("HF_SELF_TOKEN"))
         with open(summary_path, "r", encoding="utf-8") as f:
             self.summary = f.read()
 
