@@ -5,6 +5,7 @@ import os
 
 from dotenv import load_dotenv
 from gradio import ChatInterface
+from huggingface_hub import hf_hub_download
 from openai import OpenAI
 from pypdf import PdfReader
 from requests import post
@@ -86,16 +87,20 @@ tools = [{"type": "function", "function": record_user_details_json},
 
 class Me:
     """Class representing myself for the chatbot."""
-    def __init__(self, name, cv_pdf_path, summary_path):
-        """Initialize the Me class by loading LinkedIn profile and summary."""
+    def __init__(self, name, cv_pdf_filename, summary_filename, repo_id):
+        """Initialize the Me class by loading LinkedIn profile and summary from Hugging Face Hub."""
         self.openai = OpenAI()
         self.name = name
-        reader = PdfReader(cv_pdf_path)
+        # Download PDF from Hugging Face Hub
+        pdf_path = hf_hub_download(repo_id=repo_id, filename=cv_pdf_filename)
+        reader = PdfReader(pdf_path)
         self.linkedin = ""
         for page in reader.pages:
             text = page.extract_text()
             if text:
                 self.linkedin += text
+        # Download summary from Hugging Face Hub
+        summary_path = hf_hub_download(repo_id=repo_id, filename=summary_filename)
         with open(summary_path, "r", encoding="utf-8") as f:
             self.summary = f.read()
 
@@ -163,7 +168,8 @@ class Me:
 
 if __name__ == "__main__":
     name = "Carlos Bazaga"
-    cv_pdf = "me/linkedin.pdf"
-    summary_txt = "me/summary.txt"
-    ChatInterface(Me(name, cv_pdf, summary_txt).chat,
+    cv_pdf = "linkedin.pdf"
+    summary_txt = "summary.txt"
+    repo_id = "Carbaz/career_datastore"
+    ChatInterface(Me(name, cv_pdf, summary_txt, repo_id).chat,
                   type="messages", title="Carlos Bazaga's virtual CV").launch()
