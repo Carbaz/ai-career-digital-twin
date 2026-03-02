@@ -88,11 +88,12 @@ tools = [{"type": "function", "function": record_user_details_json},
 class Me:
     """Class representing myself for the chatbot."""
     def __init__(self, name, cv_pdf_filename, summary_filename, repo_id):
-        """Initialize the Me class by loading LinkedIn profile and summary from Hugging Face Hub."""
+        """Initialize the Me class by loading profile and summary from Hugging Face."""
         self.openai = OpenAI()
         self.name = name
         # Download PDF from Hugging Face Hub
-        pdf_path = hf_hub_download(repo_id=repo_id, filename=cv_pdf_filename)
+        pdf_path = hf_hub_download(repo_id=repo_id, filename=cv_pdf_filename,
+                                   token=os.getenv("HF_SELF_TOKEN"))
         reader = PdfReader(pdf_path)
         self.linkedin = ""
         for page in reader.pages:
@@ -100,7 +101,8 @@ class Me:
             if text:
                 self.linkedin += text
         # Download summary from Hugging Face Hub
-        summary_path = hf_hub_download(repo_id=repo_id, filename=summary_filename)
+        summary_path = hf_hub_download(repo_id=repo_id, filename=summary_filename,
+                                      token=os.getenv("HF_SELF_TOKEN"))
         with open(summary_path, "r", encoding="utf-8") as f:
             self.summary = f.read()
 
