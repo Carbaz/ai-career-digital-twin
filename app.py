@@ -5,11 +5,12 @@ import os
 from logging import basicConfig, getLogger
 
 from dotenv import load_dotenv
-from gradio import ChatInterface
+from gradio import Chatbot, ChatInterface
 from huggingface_hub import hf_hub_download
 from openai import OpenAI
 from pypdf import PdfReader
 from requests import post
+
 
 # Environment initialization.
 load_dotenv(override=True)
@@ -224,19 +225,20 @@ class Me:
             Avoid recording questions about something trivial or unrelated to career
             and avoid recording repeated questions.
 
-            If the user is engaging in discussion, try to steer them towards getting in
-            touch via email; ask for their email and a name to record using your
-            'record_user_details' tool. Do this only once to avoid annoying the user
-            or spamming me with same email several times, if user insists remind him that
-            you already have their email and you'll contact them.
+            If the user is engaging in discussion, or have unanswered relevant or
+            important questions try to steer them towards getting in touch via email;
+            ask for their email and a name to record using your 'record_user_details'
+            tool. Do this only once to avoid annoying the user or spamming me with same
+            email several times, if user insists remind him that you already have their
+            email and you'll contact them.
 
             Offer them to provide any additional notes, links, etc. he feels relevant,
-            as a position offer description or a relevant publication, whatever you or he
-            sees related and relevant to the conversation.
+            as a position offer link or a relevant publication, whatever you or he sees
+            related and relevant to the conversation so I can take into account when
+            reaching back to him.
 
-            Send the provided notes along with the context about the conversation and
-            history so  I can later complete the source data with the missing
-            information.
+            Send the provided notes plus the context about the conversation and history
+            together but mind the total size must respect limits.
 
             For both tools try politely always to get the user's name, ask if necessary,
             and provide context about the conversation context and history, but avoid
@@ -250,7 +252,7 @@ class Me:
               Summary and LinkedIn, and only on professional or academic related topics.
             * Before any tool call, post a single short assistant message that: (1)
               states why you will call the tool, and (2) lists exactly which fields will
-              be stored. If the user declines in reply, cancel the tool call.
+              be stored (See below). If the user declines in reply, cancel the tool call.
             * Check chat history to avoid duplicates. Do not record the same email or
               question multiple times.
             * Supply only the exact fields required by the schema; do not invent extras.
@@ -276,11 +278,13 @@ class Me:
 
             BEHAVIOR & TONE:
             * Be professional, concise, and avoid hallucination. If you do not know an
-              answer, say you don't know and offer to record the question for follow-up.
+              answer, say you don't know and offer to record the question for dataset
+              improvement and later updates.
             * Ask for name/email only once and only when consented; if already provided,
               acknowledge and do not re-ask.
             * When recording an unknown question, include at least one short reason
-              (1 sentence) why it was recorded.
+              (1 sentence) why it was recorded as a context, always try to make use
+              of the context size provided on the schema if there is enough information.
 
             ## Summary:
             {self.summary}
@@ -295,16 +299,6 @@ class Me:
     def chat(self, message, history):
         """Handle a chat message from the user."""
         messages = [{"role": "system", "content": self.system_prompt()}]
-        # If this is a new conversation (no history), preload a brief welcome
-        # message from the assistant that states who they are and that any
-        # language is supported.
-        if not history:
-            welcome = (
-                f"Hello, I'm {self.name} career digital twin."
-                "\nI can answer questions about my career, background and experience."
-                "\nYou may write in any language and I will reply in the same language."
-                "\nHow can I help today?")
-            messages.append({"role": "assistant", "content": welcome})
         messages.extend(history)
         messages.append({"role": "user", "content": message})
         while True:  # Loop to handle tool calls until no more are needed.
@@ -325,6 +319,11 @@ if __name__ == "__main__":
     cv_pdf = "linkedin.pdf"
     summary_txt = "summary.txt"
     repo_id = "Carbaz/career_datastore"
-    ChatInterface(Me(name, cv_pdf, summary_txt, repo_id).chat,
+    welcome = (f"Hello, I'm {name}'s career digital twin."
+               "\nI can answer questions about my career, background and experience."
+               "\nYou may write in any language and I will reply in the same language."
+               "\nHow can I help you today?")
+    chatbot = Chatbot(value=[{"role": "assistant", "content": welcome}])
+    ChatInterface(Me(name, cv_pdf, summary_txt, repo_id).chat, chatbot=chatbot,
                   api_visibility="private", save_history=True,
-                  type='messages', title="Carlos Bazaga's virtual CV").launch()
+                  title="Carlos Bazaga's virtual CV").launch()
