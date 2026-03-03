@@ -2,6 +2,7 @@
 
 import json
 import os
+from logging import basicConfig, getLogger
 
 from dotenv import load_dotenv
 from gradio import ChatInterface
@@ -10,11 +11,23 @@ from openai import OpenAI
 from pypdf import PdfReader
 from requests import post
 
-
+# Environment initialization.
 load_dotenv(override=True)
+HF_SELF_TOKEN = os.getenv("HF_SELF_TOKEN")
+CHAT_MODEL = os.getenv("CHAT_MODEL", "gpt-4o-mini")
 
 
-def push(text):
+# Setup the global logger.
+LOG_STYLE = '{'
+LOG_LEVEL = 'INFO'
+LOG_FORMAT = ('{asctime} {levelname:<8} {processName}({process}) '
+              '{threadName} {name} {lineno} "{message}"')
+basicConfig(level=LOG_LEVEL, style='{', format=LOG_FORMAT)
+_logger = getLogger(__name__)
+_logger.info('INITIALIZED GAME LOGGER')
+
+
+def push_notification(text):
     """Send a push notification using Pushover."""
     post("https://api.pushover.net/1/messages.json",
          data={"user": os.getenv("PUSHOVER_USER"),
@@ -22,67 +35,121 @@ def push(text):
                "message": text})
 
 
-def record_user_details(email, name="Name not provided", notes="not provided"):
+def read_pdf_from_hub(repo_id, filename) -> str:
+    """Download a PDF from the Hugging Face Hub and return its extracted text."""
+    try:
+        path = hf_hub_download(repo_id=repo_id, repo_type="dataset", filename=filename,
+                               token=HF_SELF_TOKEN)
+    except Exception as ex:
+        _logger.error(f"FAILED TO DOWNLOAD PDF FROM HUB: {repo_id}/{filename}: {ex}")
+        return ""
+    try:
+        reader = PdfReader(path)
+    except Exception as ex:
+        _logger.error(f"FAILED TO OPEN PDF FILE AT {path}: {ex}")
+        return ""
+    text_out = ""
+    for page in reader.pages:
+        try:
+            text = page.extract_text()
+        except Exception as ex:
+            _logger.error(f"FAILED TO EXTRACT TEXT FROM A PAGE IN {path}: {ex}")
+            text = None
+        if text:
+            text_out += text
+    return text_out
+
+
+def read_text_from_hub(repo_id, filename) -> str:
+    """Download a text file from the Hugging Face Hub and return its contents."""
+    try:
+        path = hf_hub_download(repo_id=repo_id, repo_type="dataset", filename=filename,
+                               token=HF_SELF_TOKEN)
+    except Exception as ex:
+        _logger.error(f"FAILED TO DOWNLOAD TEXT FROM HUB: {repo_id}/{filename}: {ex}")
+        return ""
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            return f.read()
+    except Exception as ex:
+        _logger.error(f"FAILED TO READ TEXT FROM {path}: {ex}")
+        return ""
+
+
+def record_user_details(email, name="Not provided", notes="Not Provided"):
     """Record user details via a push notification."""
-    push(f"Recording {name} with email {email} and notes {notes}")
+    push_notification(f"Contact request from: {name} With email: {email}"
+                      f" and notes: {notes}")
     return {"recorded": "ok"}
 
 
-def record_unknown_question(question):
+def record_unknown_question(question, name="Not provided", notes="Not Provided"):
     """Record an unknown question via a push notification."""
-    push(f"Recording {question}")
+    push_notification(f"Recording question: {question} from: {name}"
+                      f" and notes: {notes}")
     return {"recorded": "ok"}
 
 
 # Define tool JSON schema for the "record_user_details" tool.
 record_user_details_json = {
     "name": "record_user_details",
-    "description": "Use this tool to record that a user is interested in being"
-                   " in touch and provided an email address",
+    "description": "Use this tool to record that a user is interested in being in touch"
+                   " and provided an email address"
+                   " along with any additional details provided such as their name or "
+                   " notes about the conversation",
     "parameters": {
         "type": "object",
         "properties": {
             "email": {
                 "type": "string",
-                "description": "The email address of this user"
-            },
+                "maxLength": 254,
+                "format": "email",
+                "description": "The email address of this user"},
             "name": {
                 "type": "string",
-                "description": "The user's name, if they provided it"
-            }
-            ,
+                "maxLength": 100,
+                "description": "The user's name if they provided it"},
             "notes": {
                 "type": "string",
+                "maxLength": 1000,
                 "description": "Any additional information about the conversation"
-                " that's worth recording to give context"
-            }
-        },
+                               " that's worth recording to give context"}},
         "required": ["email"],
-        "additionalProperties": False
-    }
-}
+        "additionalProperties": False}}
 
-# Define tool JSON schema for the "record_unknown_question" tool.
+
+# Define tool JSON schema for the 'record_unknown_question' tool.
 record_unknown_question_json = {
     "name": "record_unknown_question",
     "description": "Always use this tool to record any question that couldn't be"
-                   " answered as you didn't know the answer",
+                   " answered as you didn't know the answer"
+                   " along with any additional details provided such as their name or "
+                   " notes about the conversation",
     "parameters": {
         "type": "object",
         "properties": {
             "question": {
                 "type": "string",
-                "description": "The question that couldn't be answered"
-            },
-        },
+                "maxLength": 1000,
+                "description": "The question that couldn't be answered"},
+            "name": {
+                "type": "string",
+                "maxLength": 100,
+                "description": "The user's name if they provided it"},
+            "notes": {
+                "type": "string",
+                "maxLength": 1000,
+                "description": "Any additional information about the conversation"
+                               " that's worth recording to give context"}},
         "required": ["question"],
-        "additionalProperties": False
-    }
-}
+        "additionalProperties": False}}
 
 # List of available tools.
 tools = [{"type": "function", "function": record_user_details_json},
          {"type": "function", "function": record_unknown_question_json}]
+
+tools_map = {"record_user_details": record_user_details,
+             "record_unknown_question": record_unknown_question}
 
 
 class Me:
@@ -91,22 +158,10 @@ class Me:
         """Initialize the Me class by loading profile and summary from Hugging Face."""
         self.openai = OpenAI()
         self.name = name
-        # Download PDF from Hugging Face Hub
-        pdf_path = hf_hub_download(repo_id=repo_id, repo_type='dataset',
-                                   filename=cv_pdf_filename,
-                                   token=os.getenv("HF_SELF_TOKEN"))
-        reader = PdfReader(pdf_path)
-        self.linkedin = ""
-        for page in reader.pages:
-            text = page.extract_text()
-            if text:
-                self.linkedin += text
-        # Download summary from Hugging Face Hub
-        summary_path = hf_hub_download(repo_id=repo_id, repo_type='dataset',
-                                       filename=summary_filename,
-                                       token=os.getenv("HF_SELF_TOKEN"))
-        with open(summary_path, "r", encoding="utf-8") as f:
-            self.summary = f.read()
+        # Download PDF CV from Hugging Face Hub and extract text.
+        self.linkedin = read_pdf_from_hub(repo_id, cv_pdf_filename)
+        # Download Summary from Hugging Face Hub and read text.
+        self.summary = read_text_from_hub(repo_id, summary_filename)
 
     def handle_tool_call(self, tool_calls):
         """Handle tool calls made by the AI model."""
@@ -114,9 +169,17 @@ class Me:
         for tool_call in tool_calls:
             tool_name = tool_call.function.name
             arguments = json.loads(tool_call.function.arguments)
-            print(f"Tool called: {tool_name}", flush=True)
-            tool = globals().get(tool_name)
-            result = tool(**arguments) if tool else {}
+            _logger.info(f"TOOL CALLED: {tool_name}")
+            tool = tools_map.get(tool_name)
+            if not tool:
+                _logger.error(f"TOOL NOT FOUND: {tool_name}")
+                result = {}
+            else:
+                try:
+                    result = tool(**arguments)
+                except Exception as ex:
+                    _logger.error(f"ERROR EXECUTING TOOL {tool_name}: {ex}")
+                    result = {}
             results.append({"role": "tool",
                             "content": json.dumps(result),
                             "tool_call_id": tool_call.id})
@@ -125,20 +188,31 @@ class Me:
     def system_prompt(self):
         """Generate the system prompt for the chatbot."""
         return f"""You are acting as {self.name}.
+
             You are answering questions on {self.name}'s website, particularly questions
             related to {self.name}'s career, background, skills and experience.
+
             Your responsibility is to represent {self.name} for interactions on the
             website as faithfully as possible.
+
             You are given a summary of {self.name}'s background and LinkedIn profile
             which you can use to answer questions.
+
             Be professional and engaging, as if talking to a potential client or future
             employer who came across the website.
+
             If you don't know the answer to any question, use your
-            "record_unknown_question" tool to record the question that you couldn't
-            answer, even if it's about something trivial or unrelated to career.
+            'record_unknown_question' tool to record the question that you couldn't
+            answer, try to avoid recording questions about something trivial or unrelated
+            to career and avoid recording repeated questions.
+
+            For both tools try politely always to get the user's name, ask if necessary,
+            and provide notes about the conversation context and history, but avoid
+            asking for information that the user might not want to provide.
+
             If the user is engaging in discussion, try to steer them towards getting in
             touch via email; ask for their email and record it using your
-            "record_user_details" tool, but do this only once to avoid annoying the user
+            'record_user_details' tool, but do this only once to avoid annoying the user
             or spamming me with same email several times, if user insists remind him that
             you already have their email and you'll contact them.
 
@@ -159,9 +233,9 @@ class Me:
         messages.append({"role": "user", "content": message})
         while True:  # Loop to handle tool calls until no more are needed.
             response = self.openai.chat.completions.create(
-                model="gpt-4o-mini", messages=messages, tools=tools)
+                model=CHAT_MODEL, messages=messages, tools=tools)
             # Check if the response includes tool calls.
-            if response.choices[0].finish_reason != "tool_calls":
+            if response.choices[0].finish_reason != 'tool_calls':
                 break
             message = response.choices[0].message
             results = self.handle_tool_call(message.tool_calls)
