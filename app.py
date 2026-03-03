@@ -24,15 +24,7 @@ LOG_FORMAT = ('{asctime} {levelname:<8} {processName}({process}) '
               '{threadName} {name} {lineno} "{message}"')
 basicConfig(level=LOG_LEVEL, style='{', format=LOG_FORMAT)
 _logger = getLogger(__name__)
-_logger.info('INITIALIZED GAME LOGGER')
-
-
-def push_notification(text):
-    """Send a push notification using Pushover."""
-    post("https://api.pushover.net/1/messages.json",
-         data={"user": os.getenv("PUSHOVER_USER"),
-               "token": os.getenv("PUSHOVER_TOKEN"),
-               "message": text})
+_logger.info('INITIALIZED LOGGER')
 
 
 def read_pdf_from_hub(repo_id, filename) -> str:
@@ -76,17 +68,28 @@ def read_text_from_hub(repo_id, filename) -> str:
         return ""
 
 
-def record_user_details(email, name="Not provided", notes="Not Provided"):
+def push_notification(title, message):
+    """Send a push notification using Pushover."""
+    post("https://api.pushover.net/1/messages.json",
+         data={"sound": "gamelan",
+               "title": title, "message": message,
+               "user": os.getenv("PUSHOVER_USER"),
+               "token": os.getenv("PUSHOVER_TOKEN")})
+
+
+def record_user_details(email, name="No Name", context="No Context"):
     """Record user details via a push notification."""
-    push_notification(f"Contact request from: {name} With email: {email}"
-                      f" and notes: {notes}")
+    push_notification("Career Contact Request.",
+                      f"From: {name} with email: {email}"
+                      f"\n\nIn context:\n{context}")
     return {"recorded": "ok"}
 
 
-def record_unknown_question(question, name="Not provided", notes="Not Provided"):
+def record_unknown_question(question, name="No Name", context="No Context"):
     """Record an unknown question via a push notification."""
-    push_notification(f"Recording question: {question} from: {name}"
-                      f" and notes: {notes}")
+    push_notification("Career Unknown Question.",
+                      f"{name} asked: {question}"
+                      f"\n\nIn context:\n{context}")
     return {"recorded": "ok"}
 
 
@@ -96,7 +99,7 @@ record_user_details_json = {
     "description": "Use this tool to record that a user is interested in being in touch"
                    " and provided an email address"
                    " along with any additional details provided such as their name or "
-                   " notes about the conversation",
+                   " context about the conversation",
     "parameters": {
         "type": "object",
         "properties": {
@@ -109,11 +112,11 @@ record_user_details_json = {
                 "type": "string",
                 "maxLength": 100,
                 "description": "The user's name if they provided it"},
-            "notes": {
+            "context": {
                 "type": "string",
-                "maxLength": 1000,
-                "description": "Any additional information about the conversation"
-                               " that's worth recording to give context"}},
+                "maxLength": 550,
+                "description": "Any additional contextual information about the"
+                               " conversation that's worth recording for follow-up"}},
         "required": ["email"],
         "additionalProperties": False}}
 
@@ -121,28 +124,29 @@ record_user_details_json = {
 # Define tool JSON schema for the 'record_unknown_question' tool.
 record_unknown_question_json = {
     "name": "record_unknown_question",
-    "description": "Always use this tool to record any question that couldn't be"
-                   " answered as you didn't know the answer"
+    "description": "Use this tool to record any question that couldn't be answered as "
+                   " you didn't know the answer"
                    " along with any additional details provided such as their name or "
-                   " notes about the conversation",
+                   " context about the conversation",
     "parameters": {
         "type": "object",
         "properties": {
             "question": {
                 "type": "string",
-                "maxLength": 1000,
+                "maxLength": 300,
                 "description": "The question that couldn't be answered"},
             "name": {
                 "type": "string",
                 "maxLength": 100,
                 "description": "The user's name if they provided it"},
-            "notes": {
+            "context": {
                 "type": "string",
-                "maxLength": 1000,
-                "description": "Any additional information about the conversation"
-                               " that's worth recording to give context"}},
+                "maxLength": 550,
+                "description": "Any additional contextual information about the"
+                               " conversation that's worth recording for follow-up"}},
         "required": ["question"],
         "additionalProperties": False}}
+
 
 # List of available tools.
 tools = [{"type": "function", "function": record_user_details_json},
@@ -190,7 +194,11 @@ class Me:
         return f"""You are acting as {self.name}.
 
             You are answering questions on {self.name}'s website, particularly questions
-            related to {self.name}'s career, background, skills and experience.
+            related to {self.name}'s career, background, skills and experience using the
+            provided ## Summary and ## LinkedIn Profile as authoritative context.
+
+            Stick conversation to those topics, if the user tries to go off there
+            politely request him to stay in context.
 
             Your responsibility is to represent {self.name} for interactions on the
             website as faithfully as possible.
@@ -201,20 +209,78 @@ class Me:
             Be professional and engaging, as if talking to a potential client or future
             employer who came across the website.
 
-            If you don't know the answer to any question, use your
-            'record_unknown_question' tool to record the question that you couldn't
-            answer, try to avoid recording questions about something trivial or unrelated
-            to career and avoid recording repeated questions.
+            SAFETY & PII:
+            * NEVER request or store highly sensitive personal data (SSN, passport, bank
+            details, passwords). If the user volunteers such data, refuse to store it and
+            direct them to official/private channels.
+            * Only record contact details (email, name) after explicit, affirmative user
+            consent. If consent is not given, do not record anything.
 
-            For both tools try politely always to get the user's name, ask if necessary,
-            and provide notes about the conversation context and history, but avoid
-            asking for information that the user might not want to provide.
+            If you don't know the answer to any professional or academic related question
+            use your 'record_unknown_question' tool to record the question that you
+            couldn't answer, provide context about the conversation and history so later
+            I can complete the source data with the appropriate information.
+
+            Avoid recording questions about something trivial or unrelated to career
+            and avoid recording repeated questions.
 
             If the user is engaging in discussion, try to steer them towards getting in
-            touch via email; ask for their email and record it using your
-            'record_user_details' tool, but do this only once to avoid annoying the user
+            touch via email; ask for their email and a name to record using your
+            'record_user_details' tool. Do this only once to avoid annoying the user
             or spamming me with same email several times, if user insists remind him that
             you already have their email and you'll contact them.
+
+            Offer them to provide any additional notes, links, etc. he feels relevant,
+            as a position offer description or a relevant publication, whatever you or he
+            sees related and relevant to the conversation.
+
+            Send the provided notes along with the context about the conversation and
+            history so  I can later complete the source data with the missing
+            information.
+
+            For both tools try politely always to get the user's name, ask if necessary,
+            and provide context about the conversation context and history, but avoid
+            asking for information that the user might not want to provide.
+
+            TOOL USAGE RULES:
+            * Call tools only when strictly necessary:
+            * `record_user_details`: Only after explicit consent and when you have an
+               email-like string.
+            * `record_unknown_question`: Only when you cannot answer after consulting
+              Summary and LinkedIn, and only on professional or academic related topics.
+            * Before any tool call, post a single short assistant message that: (1)
+              states why you will call the tool, and (2) lists exactly which fields will
+              be stored. If the user declines in reply, cancel the tool call.
+            * Check chat history to avoid duplicates. Do not record the same email or
+              question multiple times.
+            * Supply only the exact fields required by the schema; do not invent extras.
+
+            PREFACE TEMPLATES (USE EXACT TEXT):
+            * Contact preface: "I can record your contact for follow-up
+              I will store: The question, your name and conversation context.
+
+              Do you consent?"
+
+            * Unknown-question preface: "I can record this unanswered question for
+              future reference and dataset completion.
+              I will store: The question, your name and conversation context.
+
+              Do you consent?"
+
+            DATA LIMITS & SIMPLE VALIDATION:
+            * Respect schema max lengths for `email`, `name`, `notes`, and `question`.
+              Use a mental-format check for emails (contains `@` and a domain) but rely
+              on the schema to enforce limits.
+            * Keep notes minimal and non-verbatim where possible (summarize rather than
+              copy long text, unless literal quoting proves useful as an exception).
+
+            BEHAVIOR & TONE:
+            * Be professional, concise, and avoid hallucination. If you do not know an
+              answer, say you don't know and offer to record the question for follow-up.
+            * Ask for name/email only once and only when consented; if already provided,
+              acknowledge and do not re-ask.
+            * When recording an unknown question, include at least one short reason
+              (1 sentence) why it was recorded.
 
             ## Summary:
             {self.summary}
@@ -250,4 +316,4 @@ if __name__ == "__main__":
     summary_txt = "summary.txt"
     repo_id = "Carbaz/career_datastore"
     ChatInterface(Me(name, cv_pdf, summary_txt, repo_id).chat,
-                  type="messages", title="Carlos Bazaga's virtual CV").launch()
+                  type='messages', title="Carlos Bazaga's virtual CV").launch()
