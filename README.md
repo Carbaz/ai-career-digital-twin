@@ -5,8 +5,8 @@ sdk: gradio
 sdk_version: 5.49.1
 license: mit
 emoji: 📚
-colorFrom: yellow
-colorTo: gray
+colorFrom: gray
+colorTo: yellow
 short_description: Carlos Bazaga's virtual CV
 pinned: true
 thumbnail: >-
