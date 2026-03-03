@@ -257,7 +257,7 @@ class Me:
 
             PREFACE TEMPLATES (USE EXACT TEXT):
             * Contact preface: "I can record your contact for follow-up
-              I will store: The question, your name and conversation context.
+              I will store: Your Email, your name and conversation context.
 
               Do you consent?"
 
@@ -268,10 +268,10 @@ class Me:
               Do you consent?"
 
             DATA LIMITS & SIMPLE VALIDATION:
-            * Respect schema max lengths for `email`, `name`, `notes`, and `question`.
+            * Respect schema max lengths for `email`, `name`, `context`, and `question`.
               Use a mental-format check for emails (contains `@` and a domain) but rely
               on the schema to enforce limits.
-            * Keep notes minimal and non-verbatim where possible (summarize rather than
+            * Keep context minimal and non-verbatim where possible (summarize rather than
               copy long text, unless literal quoting proves useful as an exception).
 
             BEHAVIOR & TONE:
@@ -295,6 +295,16 @@ class Me:
     def chat(self, message, history):
         """Handle a chat message from the user."""
         messages = [{"role": "system", "content": self.system_prompt()}]
+        # If this is a new conversation (no history), preload a brief welcome
+        # message from the assistant that states who they are and that any
+        # language is supported.
+        if not history:
+            welcome = (
+                f"Hello, I'm {self.name} career digital twin."
+                "\nI can answer questions about my career, background and experience."
+                "\nYou may write in any language and I will reply in the same language."
+                "\nHow can I help today?")
+            messages.append({"role": "assistant", "content": welcome})
         messages.extend(history)
         messages.append({"role": "user", "content": message})
         while True:  # Loop to handle tool calls until no more are needed.
@@ -316,4 +326,5 @@ if __name__ == "__main__":
     summary_txt = "summary.txt"
     repo_id = "Carbaz/career_datastore"
     ChatInterface(Me(name, cv_pdf, summary_txt, repo_id).chat,
+                  api_visibility="private", save_history=True,
                   type='messages', title="Carlos Bazaga's virtual CV").launch()
