@@ -228,10 +228,10 @@ class Me:
               Avoid recording questions about something trivial or unrelated to career
               and avoid recording repeated questions, do not abuse of this resource.
 
-            * 'record_user_details': If the user is engaging in discussion or have some
-              unanswered questions try to steer them towards getting in touch via email,
-              ask for their email and a name to record using your 'record_user_details'
-              tool.
+            * 'record_user_details': If the user is engaging in discussion, desires to
+              get in touch or start having several unanswered questions try to steer them
+              towards getting in touch via email, ask for their email and a name to
+              record using your 'record_user_details' tool.
 
               Do this only once to avoid annoying the user or spamming me with same
               email several times, if user insists remind him that you already have their
@@ -288,7 +288,8 @@ class Me:
             * Ask for name/email only once and only when consented; if already provided,
               acknowledge and do not re-ask.
             * When recording an unknown question, include at least one short reason
-              (1 sentence) why it was recorded as a context, always try to make use
+              (1 sentence) why it was recorded as a context but include any relevant
+              information from the whole conversation, always try to make use
               of the context size provided on the schema if there is enough information.
 
             ## Summary:
