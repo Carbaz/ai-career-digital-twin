@@ -7,9 +7,7 @@ license: mit
 emoji: 📚
 colorFrom: gray
 colorTo: yellow
-short_description: >
-  Interactive AI-driven digital twin presenting Carlos Bazaga's academic
-  background, professional experience, and key projects.
+short_description: Carlos Bazaga's background, experience, and key projects.
 pinned: true
 thumbnail: >-
   https://cdn-uploads.huggingface.co/production/uploads/67caf50af30e4fe450042ac4/yKmJhrBhO66PULG4SZQ0F.png
