@@ -1,7 +1,8 @@
-"""Tool functions and definitions for the chatbot."""
+"""Tool functions and definitions for the AI Career Digital Twin application."""
 
-import os
+
 from logging import getLogger
+from os import environ
 
 from dotenv import load_dotenv
 from huggingface_hub import hf_hub_download
@@ -13,9 +14,9 @@ from requests import post
 load_dotenv(override=True)
 
 # Required env vars. (KeyError raised if missing)
-HF_SELF_TOKEN = os.environ["HF_SELF_TOKEN"]
-PUSHOVER_USER = os.environ["PUSHOVER_USER"]
-PUSHOVER_TOKEN = os.environ["PUSHOVER_TOKEN"]
+HF_SELF_TOKEN = environ["HF_SELF_TOKEN"]
+PUSHOVER_USER = environ["PUSHOVER_USER"]
+PUSHOVER_TOKEN = environ["PUSHOVER_TOKEN"]
 
 # Instantiate logger.
 _logger = getLogger(__name__)

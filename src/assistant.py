@@ -1,21 +1,21 @@
-"""Assistant class for the chatbot."""
+"""Assistant class for the AI Career Digital Twin application."""
 
-import json
-import os
+from json import dumps, loads
 from logging import getLogger
+from os import getenv
 
 from dotenv import load_dotenv
 from openai import OpenAI
 
-from prompts import get_system_prompt
-from tools import read_pdf_from_hub, read_text_from_hub, tools_def, tools_map
+from .prompts import get_system_prompt
+from .tools import read_pdf_from_hub, read_text_from_hub, tools_def, tools_map
 
 
 # Environment initialization.
 load_dotenv(override=True)
 
 # Optional env vars. (with fallbacks)
-CHAT_MODEL = os.getenv("CHAT_MODEL", "gpt-4o-mini")
+CHAT_MODEL = getenv("CHAT_MODEL", "gpt-4o-mini")
 
 
 class Assistant:
@@ -35,7 +35,7 @@ class Assistant:
         results = []
         for tool_call in tool_calls:
             tool_name = tool_call.function.name
-            arguments = json.loads(tool_call.function.arguments)
+            arguments = loads(tool_call.function.arguments)
             _logger.info(f"TOOL CALLED: {tool_name}")
             tool = tools_map.get(tool_name)
             if not tool:
@@ -48,7 +48,7 @@ class Assistant:
                     _logger.error(f"ERROR EXECUTING TOOL {tool_name}: {ex}")
                     result = {"error": "Failed. Recording service unavailable"}
             results.append({"role": "tool",
-                            "content": json.dumps(result),
+                            "content": dumps(result),
                             "tool_call_id": tool_call.id})
         return results
 

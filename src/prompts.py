@@ -1,4 +1,12 @@
-"""Prompt templates for the chatbot."""
+"""Prompt for the AI Career Digital Twin application."""
+
+
+def get_welcome_message(name):
+    """Generate the welcome message for the chatbot."""
+    return (f"Hello, I'm {name}'s career digital twin."
+            "\nI can answer questions about my career, background and experience."
+            "\nYou may write in any language and I will reply in the same language."
+            "\nHow can I help you today?")
 
 
 def get_system_prompt(name, summary, linkedin):
