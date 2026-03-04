@@ -16,3 +16,15 @@ thumbnail: >-
 ## Career conversation digital twin
 
 AI-powered interactive chatbot about my own academic and professional career.
+
+## TODO
+
+* [ ] **Message timestamps for time-aware behavior**: Add timestamps to all
+  messages so the model can react to time gaps (e.g., "good morning, long
+  time no see"). Enable time-window-based decisions like "5 errors within
+  1 hour voids that error record" or graceful timeout behaviors. Useful for
+  natural conversation and smart error recovery strategies.
+
+* [ ] **Time-window error tracking**: Implement error rate tracking with time
+  windows to inform when to gracefully degrade service or reset error
+  counters (e.g., 24-hour window for error count reset).
