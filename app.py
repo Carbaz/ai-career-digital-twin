@@ -360,11 +360,9 @@ class Me:
         messages = [{"role": "system", "content": self.system_prompt()}]
         messages.extend(history)
         messages.append({"role": "user", "content": message})
-        # Safety quotas to prevent token waste and protect failing services.
+        # Safety quota to prevent token waste from infinite tool call loops.
         max_tool_calls = len(tools)
-        max_tool_failures = 5
         tool_calls_count = 0
-        tool_failures_count = 0
         while True:  # Loop to handle tool calls until no more are needed.
             response = self.openai.chat.completions.create(
                 model=CHAT_MODEL, messages=messages, tools=tools)
@@ -372,22 +370,18 @@ class Me:
             if response.choices[0].finish_reason != 'tool_calls':
                 break
             if tool_calls_count >= max_tool_calls:
-                _logger.warning(f"MAX TOOL CALLS REACHED ({max_tool_calls}), breaking loop to prevent token waste")
+                _logger.warning(f"MAX TOOL CALLS REACHED ({max_tool_calls})")
                 break
             message = response.choices[0].message
             results = self.handle_tool_call(message.tool_calls)
-            # Track tool failures to avoid pushing a failing service
+            # Log any tool failures for visibility.
             for result in results:
                 result_content = json.loads(result["content"])
                 if "error" in result_content:
-                    tool_failures_count += 1
-                    if tool_failures_count >= max_tool_failures:
-                        _logger.warning(f"MAX TOOL FAILURES REACHED ({max_tool_failures}), breaking loop to avoid pushing failing service")
+                    _logger.error(f"TOOL FAILURE: {result_content['error']}")
             messages.append(message)
             messages.extend(results)
             tool_calls_count += 1
-            if tool_failures_count >= max_tool_failures:
-                break
         return response.choices[0].message.content
 
 
