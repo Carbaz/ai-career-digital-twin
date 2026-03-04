@@ -8,6 +8,7 @@ from logging import basicConfig, getLogger
 from assistant import Assistant
 from dotenv import load_dotenv
 from gradio import Chatbot, ChatInterface
+from gradio import __version__ as gr_version
 
 
 # Setup the global logger.
@@ -44,22 +45,27 @@ if __name__ == "__main__":
                "\nI can answer questions about my career, background and experience."
                "\nYou may write in any language and I will reply in the same language."
                "\nHow can I help you today?")
-
-    # my_chatbot = Chatbot(value=[{"role": "assistant", "content": welcome}])  # Gradio 6
+    # Configure Gradio components based on detected version.
+    match gr_version[0]:
+        case "5":
+            _logger.info(f"GRADIO 5 DETECTED: {gr_version}")
+            chat_ifz_conf = {"type": "messages", "show_api": "false", "api_name": False}
+            chat_bot_conf = {"type": "messages",
+                            "show_copy_all_button": True,
+                            "show_copy_button": True}
+        case "6":
+            _logger.info(f"GRADIO 6 DETECTED: {gr_version}")
+            chat_ifz_conf = {"api_visibility": "private"}
+            chat_bot_conf = {"buttons": ["copy", "copy_all"]}
 
     my_chatbot = Chatbot(value=[{"role": "assistant", "content": welcome}],
-                        label=f"{name} Digital Twin",
-                        scale=1,
-                        height=400,
-                        type="messages",
-                        autoscroll=True,
-                        )  # Gradio 5
+                         label=f"{name} Digital Twin",
+                         height=None, scale=1,
+                         **chat_bot_conf)
 
-    chat = ChatInterface(Assistant(
+    app = ChatInterface(Assistant(
         name, cv_pdf, summary_txt, repo_id).chat,
-        chatbot=my_chatbot,
-        # api_visibility="private",  # Gradio 6
-        type="messages", show_api="false", api_name=False,  # Gradio 5
+        chatbot=my_chatbot, **chat_ifz_conf,
         save_history=True, title="Carlos Bazaga's virtual CV")
-    chat.saved_conversations.secret = MY_CHAT_SECRET
-    chat.launch()
+    app.saved_conversations.secret = MY_CHAT_SECRET
+    app.launch()
