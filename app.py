@@ -409,10 +409,7 @@ if __name__ == "__main__":
                "\nHow can I help you today?")
 
     my_chatbot = Chatbot(value=[{"role": "assistant", "content": welcome}])
-    my_textbox = Textbox(autofocus=True, interactive=True,
-                         placeholder="Ask me about my experience...")
 
-    ChatInterface(Me(name, cv_pdf, summary_txt, repo_id).chat,
-                  chatbot=my_chatbot, textbox=my_textbox,
+    ChatInterface(Me(name, cv_pdf, summary_txt, repo_id).chat, chatbot=my_chatbot,
                   api_visibility="private", save_history=True,
                   title="Carlos Bazaga's virtual CV").launch()
