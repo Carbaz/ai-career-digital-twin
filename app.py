@@ -14,7 +14,13 @@ from requests import post
 
 # Environment initialization.
 load_dotenv(override=True)
-HF_SELF_TOKEN = os.getenv("HF_SELF_TOKEN")
+
+# Required env vars. (KeyError raised if missing)
+HF_SELF_TOKEN = os.environ["HF_SELF_TOKEN"]
+PUSHOVER_USER = os.environ["PUSHOVER_USER"]
+PUSHOVER_TOKEN = os.environ["PUSHOVER_TOKEN"]
+
+# Optional env vars. (with fallbacks)
 CHAT_MODEL = os.getenv("CHAT_MODEL", "gpt-4o-mini")
 
 
@@ -71,11 +77,20 @@ def read_text_from_hub(repo_id, filename) -> str:
 
 def push_notification(title, message):
     """Send a push notification using Pushover."""
-    post("https://api.pushover.net/1/messages.json",
-         data={"sound": "gamelan",
-               "title": title, "message": message,
-               "user": os.getenv("PUSHOVER_USER"),
-               "token": os.getenv("PUSHOVER_TOKEN")})
+    try:
+        response = post("https://api.pushover.net/1/messages.json",
+                        data={"sound": "gamelan", "title": title, "message": message,
+                              "user": PUSHOVER_USER, "token": PUSHOVER_TOKEN})
+        if response.status_code != 200:
+            _logger.error(f"PUSHOVER NOTIFICATION FAILED: {response.status_code}"
+                          f" - {response.text}")
+            raise RuntimeError(f"Pushover failed: {response.status_code}")
+        _logger.info(f"PUSHOVER NOTIFICATION SENT: {title}")
+    except RuntimeError:
+        raise
+    except Exception as ex:
+        _logger.error(f"PUSHOVER NOTIFICATION ERROR: {ex}")
+        raise RuntimeError(f"Pushover error: {ex}") from ex
 
 
 def record_user_details(email, name="No Name", context="No Context"):
@@ -177,14 +192,14 @@ class Me:
             _logger.info(f"TOOL CALLED: {tool_name}")
             tool = tools_map.get(tool_name)
             if not tool:
-                _logger.error(f"TOOL NOT FOUND: {tool_name}")
-                result = {}
+                _logger.critical(f"TOOL NOT FOUND: {tool_name}")
+                result = {"error": f"Internal error: Tool '{tool_name}' not configured. This is not a user-facing issue."}
             else:
                 try:
                     result = tool(**arguments)
                 except Exception as ex:
                     _logger.error(f"ERROR EXECUTING TOOL {tool_name}: {ex}")
-                    result = {}
+                    result = {"error": f"Failed to record. Recording service unavailable. Please try again later."}
             results.append({"role": "tool",
                             "content": json.dumps(result),
                             "tool_call_id": tool_call.id})
@@ -297,6 +312,26 @@ class Me:
             * For context fields, include all relevant information from the conversation
               that helps provide proper context for follow-up or dataset completion.
 
+            ERROR HANDLING & APOLOGIES:
+            * When ANY tool fails, apologize sincerely and explain what happened.
+            * NEVER retry on your own. Always tell the user and let THEM decide.
+            * "Internal error: Tool not configured" = My configuration issue.
+              Apologize: "I sincerely apologize—there's an internal configuration issue
+              preventing recording. This isn't something retrying would help with. Please
+              contact support if this persists."
+            * "Recording service unavailable" = Temporary service issue.
+              Apologize and guide: "I apologize—the recording service is having issues
+              right now. Please don't retry immediately—wait a bit and try again later
+              when the service recovers. Your conversation is saved here in your browser,
+              so you can always come back to it later today or another day without losing
+              any of this context. Would you like to continue our conversation, or would
+              you prefer to try recording again in a little while?"
+            * CRITICAL: Do NOT automatically retry. Only retry if the user explicitly
+              asks or indicates they want to try again.
+            * In summary: You fail, you apologize, you explain the situation, you remind
+              them the conversation is saved, and you let them decide what to do. Don't
+              push recording when service is clearly struggling.
+
             BEHAVIOR & TONE:
             * Be professional, concise, and genuine. Avoid hallucination and inventing
               facts. If you don't know something, say so clearly.
@@ -325,16 +360,34 @@ class Me:
         messages = [{"role": "system", "content": self.system_prompt()}]
         messages.extend(history)
         messages.append({"role": "user", "content": message})
+        # Safety quotas to prevent token waste and protect failing services.
+        max_tool_calls = len(tools)
+        max_tool_failures = 5
+        tool_calls_count = 0
+        tool_failures_count = 0
         while True:  # Loop to handle tool calls until no more are needed.
             response = self.openai.chat.completions.create(
                 model=CHAT_MODEL, messages=messages, tools=tools)
             # Check if the response includes tool calls.
             if response.choices[0].finish_reason != 'tool_calls':
                 break
+            if tool_calls_count >= max_tool_calls:
+                _logger.warning(f"MAX TOOL CALLS REACHED ({max_tool_calls}), breaking loop to prevent token waste")
+                break
             message = response.choices[0].message
             results = self.handle_tool_call(message.tool_calls)
+            # Track tool failures to avoid pushing a failing service
+            for result in results:
+                result_content = json.loads(result["content"])
+                if "error" in result_content:
+                    tool_failures_count += 1
+                    if tool_failures_count >= max_tool_failures:
+                        _logger.warning(f"MAX TOOL FAILURES REACHED ({max_tool_failures}), breaking loop to avoid pushing failing service")
             messages.append(message)
             messages.extend(results)
+            tool_calls_count += 1
+            if tool_failures_count >= max_tool_failures:
+                break
         return response.choices[0].message.content
 
 
