@@ -41,12 +41,12 @@ def read_pdf_from_hub(repo_id, filename) -> str:
                                token=HF_SELF_TOKEN)
     except Exception as ex:
         _logger.error(f"FAILED TO DOWNLOAD PDF FROM HUB: {repo_id}/{filename}: {ex}")
-        return ""
+        return "NO DATA"
     try:
         reader = PdfReader(path)
     except Exception as ex:
         _logger.error(f"FAILED TO OPEN PDF FILE AT {path}: {ex}")
-        return ""
+        return "NO DATA"
     text_out = ""
     for page in reader.pages:
         try:
@@ -56,7 +56,7 @@ def read_pdf_from_hub(repo_id, filename) -> str:
             text = None
         if text:
             text_out += text
-    return text_out
+    return text_out if text_out else "NO DATA"
 
 
 def read_text_from_hub(repo_id, filename) -> str:
@@ -66,19 +66,20 @@ def read_text_from_hub(repo_id, filename) -> str:
                                token=HF_SELF_TOKEN)
     except Exception as ex:
         _logger.error(f"FAILED TO DOWNLOAD TEXT FROM HUB: {repo_id}/{filename}: {ex}")
-        return ""
+        return "NO DATA"
     try:
         with open(path, "r", encoding="utf-8") as f:
-            return f.read()
+            content = f.read()
+        return content if content else "NO DATA"
     except Exception as ex:
         _logger.error(f"FAILED TO READ TEXT FROM {path}: {ex}")
-        return ""
+        return "NO DATA"
 
 
 def push_notification(title, message):
     """Send a push notification using Pushover."""
     try:
-        response = post("https://api.pushover.net/1/messages.json",
+        response = post("https://api.pushover.net/1/messages.json", timeout=3,
                         data={"sound": "gamelan", "title": title, "message": message,
                               "user": PUSHOVER_USER, "token": PUSHOVER_TOKEN})
         if response.status_code != 200:
@@ -193,13 +194,13 @@ class Me:
             tool = tools_map.get(tool_name)
             if not tool:
                 _logger.critical(f"TOOL NOT FOUND: {tool_name}")
-                result = {"error": f"Internal error: Tool '{tool_name}' not configured. This is not a user-facing issue."}
+                result = {"error": f"Internal error: Tool '{tool_name}' not configured"}
             else:
                 try:
                     result = tool(**arguments)
                 except Exception as ex:
                     _logger.error(f"ERROR EXECUTING TOOL {tool_name}: {ex}")
-                    result = {"error": f"Failed to record. Recording service unavailable. Please try again later."}
+                    result = {"error": f"Failed. Recording service unavailable"}
             results.append({"role": "tool",
                             "content": json.dumps(result),
                             "tool_call_id": tool_call.id})
@@ -236,8 +237,9 @@ class Me:
 
             SAFETY & PII:
             * NEVER request or store highly sensitive personal data (SSN, passport, bank
-              details, passwords). If the user volunteers such data, refuse to store it
-              and direct them to official/private channels.
+              details, passwords, phone numbers, physical addresses, etc). If the user
+              volunteers such data, refuse to store it and direct them to
+              official/private channels.
 
             * When offering to record contact details (email, name) do it only after
               explicit, affirmative user consent. If consent is not given, cancel and
@@ -268,6 +270,8 @@ class Me:
               know but forgot to add, or (b) evaluate if it's worth pursuing for
               follow-up.
             * Avoid recording trivial questions, off-topic questions, or duplicates.
+            * EXCEPTION: If any context data shows "NO DATA", do NOT offer the question
+              recording tool. Only offer contact recording.
 
             Recording User Contact Details:
             * Offer to record contact information in any of these scenarios:
@@ -307,8 +311,7 @@ class Me:
 
             DATA LIMITS & VALIDATION:
             * Respect schema max lengths for `email`, `name`, `context`, and `question`.
-            * Use a mental-format check for emails (contains `@` and a domain) but rely
-              on the schema to enforce limits.
+            * For emails: Accept email-like formats. Be flexible with variations.
             * For context fields, include all relevant information from the conversation
               that helps provide proper context for follow-up or dataset completion.
 
@@ -331,6 +334,16 @@ class Me:
             * In summary: You fail, you apologize, you explain the situation, you remind
               them the conversation is saved, and you let them decide what to do. Don't
               push recording when service is clearly struggling.
+
+            HANDLING MISSING DATA:
+            * If any required context data shows "NO DATA", it means information could
+              not be loaded due to service issues.
+            * Apologize sincerely for the service malfunction.
+            * Inform the user that they can: (1) provide contact information and context
+              to record so {self.name} can follow up directly, or (2) come back later
+              when data is available again.
+            * Only offer contact recording, do not offer to record questions, since
+              there's no context to evaluate them against.
 
             BEHAVIOR & TONE:
             * Be professional, concise, and genuine. Avoid hallucination and inventing
