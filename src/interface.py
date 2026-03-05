@@ -52,7 +52,7 @@ def get_interface(name, cv_pdf, summary_txt, repo_id):
 
     app = ChatInterface(Assistant(
         name, cv_pdf, summary_txt, repo_id).chat,
-        chatbot=my_chatbot, **chat_ifz_conf,
+        chatbot=my_chatbot, autofocus=False, **chat_ifz_conf,
         save_history=True, title="Carlos Bazaga's virtual CV")
 
     # Set the secret for encrypting saved conversations.
