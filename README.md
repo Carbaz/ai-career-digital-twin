@@ -7,7 +7,7 @@ license: mit
 emoji: 📚
 colorFrom: gray
 colorTo: yellow
-short_description: Digital twin for the owner's background, experience, and key projects.
+short_description: Owner's Career Conversation Digital Twin.
 pinned: true
 thumbnail: >-
   https://cdn-uploads.huggingface.co/production/uploads/67caf50af30e4fe450042ac4/yKmJhrBhO66PULG4SZQ0F.png
