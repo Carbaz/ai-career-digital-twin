@@ -15,7 +15,7 @@ from .tools import read_pdf_from_hub, read_text_from_hub, tools_def, tools_map
 load_dotenv(override=True)
 
 # Optional env vars. (with fallbacks)
-CHAT_MODEL = getenv("CHAT_MODEL", "gpt-4o-mini")
+CHAT_MODEL = getenv("CHAT_MODEL", "gpt-5-mini")
 
 
 class Assistant:

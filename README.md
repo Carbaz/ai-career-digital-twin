@@ -90,7 +90,7 @@ You must define these variables in a `.env` file:
 * `HF_SELF_TOKEN`: Hugging Face token to download private files.
 * `PUSHOVER_USER`: Pushover user key for notifications.
 * `PUSHOVER_TOKEN`: Pushover API token.
-* `CHAT_MODEL`: (optional) OpenAI model to use (default: `gpt-4o-mini`).
+* `CHAT_MODEL`: (optional) OpenAI model to use (default: `gpt-5-mini`).
 * `GRADIO_STATE_SECRET_CV_TWIN`: A random secret key to make sure sessions recorded
   are kept between service restarts.
 
@@ -100,7 +100,7 @@ Example `.env`:
 HF_SELF_TOKEN="your_hf_token"
 PUSHOVER_USER="your_user_key"
 PUSHOVER_TOKEN="your_api_token"
-CHAT_MODEL="gpt-4o-mini"
+CHAT_MODEL="gpt-5-mini"
 GRADIO_STATE_SECRET_CV_TWIN="your_generated_secret_key"
 ```
 
