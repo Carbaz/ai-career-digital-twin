@@ -47,7 +47,7 @@ def get_interface(name, cv_pdf, summary_txt, repo_id):
     my_chatbot = Chatbot(value=[{"role": "assistant",
                                  "content": get_welcome_message(name)}],
                             label=f"{name} Digital Twin",
-                            max_height=None, scale=1,
+                            height=None, scale=1,
                             **chat_bot_conf)
 
     app = ChatInterface(Assistant(
