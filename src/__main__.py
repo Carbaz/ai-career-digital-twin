@@ -14,7 +14,7 @@ def main(name, cv_pdf, summary_txt, repo_id):
     """Launch the AI Career Digital Twin application."""
     _logger.info('STARTING AI CAREER DIGITAL TWIN...')
     app = get_interface(name, cv_pdf, summary_txt, repo_id)
-    app.launch(footer_links=[])
+    app.launch(footer_links=["gradio"])
     # We return the app instance for potential use in autoreload scenarios.
     return app
 
