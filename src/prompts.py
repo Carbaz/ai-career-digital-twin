@@ -174,10 +174,10 @@ def get_system_prompt(name, summary, linkedin):
               and avoid asking repeatedly for information they have declined.
 
             ## Summary:
-            {summary}
+            '''{summary}'''
 
             ## LinkedIn Profile:
-            {linkedin}
+            '''{linkedin}'''
 
             With this context, please chat with the user,
             always staying in character as {name}.

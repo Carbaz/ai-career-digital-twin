@@ -30,7 +30,7 @@ else:
     MY_CHAT_SECRET = "".join(choice(ascii_letters + digits) for _ in range(16))
 
 
-def get_interface(name, cv_pdf, summary_txt, repo_id):
+def get_interface(name, cv_pdf, summary_text, repo_id):
     """Get the Gradio ChatInterface for the AI Career Digital Twin."""
     match gr_version[0]:
         case "5":
@@ -51,7 +51,7 @@ def get_interface(name, cv_pdf, summary_txt, repo_id):
                             **chat_bot_conf)
 
     app = ChatInterface(Assistant(
-        name, cv_pdf, summary_txt, repo_id).chat,
+        name, cv_pdf, summary_text, repo_id).chat,
         chatbot=my_chatbot, autofocus=False, **chat_ifz_conf,
         save_history=True, title="Carlos Bazaga's virtual CV")
 
