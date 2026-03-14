@@ -21,14 +21,14 @@ CHAT_MODEL = getenv("CHAT_MODEL", "gpt-5-mini")
 class Assistant:
     """Class representing myself for the chatbot."""
 
-    def __init__(self, name, cv_pdf_filename, summary_filename, repo_id):
+    def __init__(self, name, profile_pdf, summary_text, repo_id):
         """Initialize the Assistant class by loading profile and summary."""
         self.name = name
         self.openai = OpenAI()
         # Download PDF CV from Hugging Face Hub and extract text.
-        self.linkedin = read_pdf_from_hub(repo_id, cv_pdf_filename)
+        self.linkedin = read_pdf_from_hub(repo_id, profile_pdf)
         # Download Summary from Hugging Face Hub and read text.
-        self.summary = read_text_from_hub(repo_id, summary_filename)
+        self.summary = read_text_from_hub(repo_id, summary_text)
 
     def handle_tool_call(self, tool_calls):
         """Handle tool calls made by the AI model."""
