@@ -6,11 +6,11 @@ from secrets import choice
 from string import ascii_letters, digits
 
 from dotenv import load_dotenv
-from gradio import Chatbot, ChatInterface
+from gradio import Chatbot, ChatInterface, Markdown
 from gradio import __version__ as gr_version
 
 from .assistant import Assistant
-from .prompts import get_welcome_message
+from .prompts import FOOTER_DISCLAIMER, get_welcome_message
 
 
 _logger = getLogger(__name__)
@@ -57,5 +57,9 @@ def get_interface(name, profile_pdf, summary_text, repo_id):
 
     # Set the secret for encrypting saved conversations.
     app.saved_conversations.secret = MY_CHAT_SECRET
+
+    # Footer with disclaimer.
+    with app:
+        Markdown(FOOTER_DISCLAIMER, elem_id="footer-disclaimer")
 
     return app

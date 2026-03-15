@@ -182,3 +182,12 @@ def get_system_prompt(name, summary, linkedin):
             With this context, please chat with the user,
             always staying in character as {name}.
             """
+
+
+FOOTER_DISCLAIMER = """
+<div style='text-align: center; font-size: small;'>
+    This chatbot is powered by OpenAI's generative AI technology.<br>
+    While it strives to provide accurate information, it may occasionally make mistakes.
+    Additionally, conversations may be used to improve OpenAI's models.
+</div>
+"""
