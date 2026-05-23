@@ -5,8 +5,8 @@ sdk: gradio
 sdk_version: 6.14.0
 license: mit
 emoji: 🤖
-colorFrom: green
-colorTo: yellow
+colorFrom: indigo
+colorTo: green
 short_description: Owner's Career Conversation Digital Twin.
 pinned: true
 thumbnail: >-
