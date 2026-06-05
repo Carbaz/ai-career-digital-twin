@@ -3,4 +3,5 @@ python-dotenv
 gradio
 pypdf
 openai
+tiktoken
 huggingface_hub
