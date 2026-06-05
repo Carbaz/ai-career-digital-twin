@@ -8,7 +8,8 @@ from dotenv import load_dotenv
 from openai import OpenAI
 
 from .prompts import get_system_prompt
-from .tools import read_pdf_from_hub, read_text_from_hub, tools_def, tools_map
+from .tools import num_tokens_from_string, read_pdf_from_hub, read_text_from_hub
+from .tools import tools_def, tools_map
 
 
 # Environment initialization.
@@ -29,6 +30,11 @@ class Assistant:
         self.linkedin = read_pdf_from_hub(repo_id, profile_pdf)
         # Download Summary from Hugging Face Hub and read text.
         self.summary = read_text_from_hub(repo_id, summary_text)
+        _logger.info(f"ASSISTANT INITIALIZED WITH NAME: {self.name}")
+        _logger.info(f"LINKEDIN PROFILE LENGTH: {num_tokens_from_string(
+            self.linkedin, CHAT_MODEL)} TOKENS")
+        _logger.info(f"SUMMARY LENGTH: {num_tokens_from_string(
+            self.summary, CHAT_MODEL)} TOKENS")
 
     def handle_tool_call(self, tool_calls):
         """Handle tool calls made by the AI model."""
@@ -59,6 +65,8 @@ class Assistant:
                                                   self.linkedin)}]
         messages.extend(history)
         messages.append({"role": "user", "content": message})
+        # Log history length for debugging and monitoring.
+        _logger.info(f'HISTORY LENGTH: {len(history)}')
         # Safety quota to prevent token waste from infinite tool call loops.
         max_tool_calls = len(tools_map)
         tool_calls_count = 0
