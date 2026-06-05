@@ -26,7 +26,12 @@ _logger = getLogger(__name__)
 # Function definitions.
 def num_tokens_from_string(string: str, model: str) -> int:
     """Return the number of tokens in a text string."""
-    encoding = encoding_for_model(model)
+    try:
+        encoding = encoding_for_model(model)
+    except Exception as ex:
+        _logger.error(f"ERROR GETTING ENCODING FOR MODEL {model}: {ex}"
+                      f", DEFAULTING TO 'gpt-5'")
+        encoding = encoding_for_model("gpt-5")
     num_tokens = len(encoding.encode(string))
     return num_tokens
 
