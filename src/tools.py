@@ -8,6 +8,7 @@ from dotenv import load_dotenv
 from huggingface_hub import hf_hub_download
 from pypdf import PdfReader
 from requests import post
+from tiktoken import encoding_for_model
 
 
 # Environment initialization.
@@ -23,6 +24,13 @@ _logger = getLogger(__name__)
 
 
 # Function definitions.
+def num_tokens_from_string(string: str, model: str) -> int:
+    """Return the number of tokens in a text string."""
+    encoding = encoding_for_model(model)
+    num_tokens = len(encoding.encode(string))
+    return num_tokens
+
+
 def read_pdf_from_hub(repo_id, filename) -> str:
     """Download PDF from HF Hub and return extracted text."""
     try:
