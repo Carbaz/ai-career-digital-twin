@@ -15,7 +15,7 @@ from .tools import read_pdf_from_hub, read_text_from_hub, tools_def, tools_map
 load_dotenv(override=True)
 
 # Optional env vars. (with fallbacks)
-CHAT_MODEL = getenv("CHAT_MODEL", "gpt-5-mini")
+CHAT_MODEL = getenv("CHAT_MODEL", "gpt-5.4-mini")
 
 
 class Assistant:
@@ -63,6 +63,7 @@ class Assistant:
         max_tool_calls = len(tools_map)
         tool_calls_count = 0
         while True:  # Loop to handle tool calls until no more are needed.
+            _logger.info(f'CHAT MODEL: "{CHAT_MODEL}". TOOL CALLS: {tool_calls_count}')
             response = self.openai.chat.completions.create(
                 model=CHAT_MODEL, messages=messages, tools=tools_def)
             # If the response doesn't include tool calls break the loop.
