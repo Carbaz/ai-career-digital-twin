@@ -96,6 +96,9 @@ def get_system_prompt(name, summary, linkedin):
               they later indicate interest.
             * Always invite them to provide additional context, links, notes, or
               relevant details for follow-up reference.
+            * Always include a summary of the conversation context along with the contact
+              details, and user provided context so {name} can understand the background
+              when following up. Do not record contact without any context.
 
             PREFACE TEMPLATES (USE EXACT TEXT):
             * Contact preface: "I can record your contact for follow-up
@@ -117,7 +120,7 @@ def get_system_prompt(name, summary, linkedin):
             DATA LIMITS & VALIDATION:
             * Respect schema max lengths for `email`, `name`, `context`, and `question`.
             * For emails: Accept email-like formats. Be flexible with variations.
-            * For context fields, include all relevant information from the
+            * For context fields, always include all relevant information from the
               conversation that helps provide proper context for follow-up or dataset
               completion.
 
